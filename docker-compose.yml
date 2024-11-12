@@ -11,4 +11,5 @@ services:
       - BACK_COLOR=white
     volumes:
       - ./qr_codes:/app/qr_codes  # Maps the local 'qr_codes' directory to '/app/qr_codes' in the container
+      - ./logs:/app/logs
     command: --url https://github.com/gsinghjay/  # Replace 'main.py' with your script's filename if different

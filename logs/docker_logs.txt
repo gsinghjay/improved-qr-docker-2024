@@ -1,0 +1,1 @@
+qr_code_app-1  | 2024-11-12 18:45:48,132 - INFO - QR code successfully saved to /app/qr_codes/QRCode_20241112184548.png
