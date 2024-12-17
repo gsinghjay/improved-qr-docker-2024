@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # and ensure they are owned by the non-root user
 RUN mkdir logs qr_codes && chown myuser:myuser logs qr_codes
 
-# Copy the rest of the application's source code into the container, setting ownership to 'myuser'
+# Copy the rest of the application's source code into the container
 COPY --chown=myuser:myuser . .
 
 # Set PYTHONPATH to include the app directory
@@ -32,3 +32,10 @@ USER myuser
 
 # Run Flask application using the new entry point
 CMD ["python", "run.py"]
+
+# Copy and set permissions for entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["docker-entrypoint.sh"]
