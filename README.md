@@ -12,9 +12,11 @@ A Flask-based QR code generator that creates customizable QR codes for URLs. Bui
 - Docker containerization for easy deployment
 - Clean architecture with MVC pattern
 
+Here's the updated architecture section for the README.md, incorporating the testing infrastructure:
+
 ## Architecture
 
-The application follows the Model-View-Controller (MVC) pattern with additional service layer and Docker containerization:
+The application follows the Model-View-Controller (MVC) pattern with additional service layer, testing infrastructure, and Docker containerization:
 
 ```
 app/
@@ -41,18 +43,31 @@ project_root/
 │   └── docker_logs.txt # Docker runtime logs
 ├── qr_codes/         # Generated QR code storage
 ├── requirements.txt  # Python dependencies
-└── run.py           # Application entry point
+├── run.py           # Application entry point
+├── pytest.ini       # Test configuration
+└── tests/           # Test suite
+    ├── conftest.py  # Test fixtures and configuration
+    └── test_qr_controller.py # Controller tests
 ```
 
-The application is containerized using Docker with three main services:
+The application is containerized using Docker with four main services:
 - **qr_code_app**: Flask application container (Python 3.12)
 - **db**: PostgreSQL 15 database container
 - **pgadmin**: PostgreSQL administration interface
+- **test_app**: Test container for CI/CD pipeline
 
 Key directories:
 - **/logs**: Contains application logs, mounted as a Docker volume
 - **/qr_codes**: Stores generated QR code images, mounted as a Docker volume
 - **/app**: Core application code, mounted for development hot-reloading
+- **/tests**: Test suite and fixtures
+- **/.github/workflows**: CI/CD configuration
+
+Testing Architecture:
+- **conftest.py**: Provides test fixtures and database setup
+- **test_qr_controller.py**: Controller integration tests
+- **pytest.ini**: Test discovery and coverage configuration
+- **GitHub Actions**: Automated testing pipeline with PostgreSQL service
 
 ## Development
 
@@ -86,6 +101,32 @@ docker-compose up --build
 # Web UI: http://localhost:5000
 # PgAdmin: http://localhost:5050 (admin@admin.com / admin)
 ```
+
+## Testing
+
+### Running Tests Locally
+```bash
+# Install test dependencies
+pip install -r requirements.txt
+
+# Run tests with coverage
+pytest tests/ --cov=app -v
+
+# Run specific test file
+pytest tests/test_qr_controller.py -v
+```
+
+### Test Structure
+- `tests/conftest.py`: Test fixtures and configuration
+- `tests/test_qr_controller.py`: Controller tests
+- `pytest.ini`: Pytest configuration
+
+### GitHub Actions CI
+The project includes automated testing via GitHub Actions:
+- Runs on every push and pull request
+- Uses PostgreSQL service container
+- Generates coverage reports
+- Uploads results to Codecov
 
 ## Environment Variables
 
@@ -147,14 +188,6 @@ We follow conventional commits for clear change history:
 - `refactor(scope):` Code refactoring
 - `test(scope):` Test changes
 - `chore(scope):` Maintenance tasks
-
-## License
-
-MIT License
-
-## Author
-
-[Your Name]
 
 ## Acknowledgments
 
