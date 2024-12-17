@@ -1,4 +1,8 @@
-# Use the official Python image from the Python Docker Hub repository as the base image
+# Dockerfile for QR Code Generator application
+# 
+# This Dockerfile creates a production-ready container for the QR code generator
+# application. It uses Python 3.12 slim image as base and sets up a non-root
+# user for security.
 FROM python:3.12-slim-bullseye
 
 # Set the working directory to /app in the container

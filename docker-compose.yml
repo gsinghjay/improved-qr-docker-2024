@@ -1,3 +1,10 @@
+# Docker Compose configuration for QR Code Generator
+# 
+# This file defines the services needed to run the QR code generator application:
+# - qr_code_app: The main Flask application
+# - db: PostgreSQL database
+# - pgadmin: PostgreSQL admin interface
+
 version: '3.8'
 
 services:
