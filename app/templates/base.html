@@ -158,19 +158,28 @@
             });
             
             const result = await response.json();
-            addMessage('assistant', result.response);
+            console.log('Chat response:', result); // Debug log
             
-            // Refresh page if operation was successful
-            if (result.success && (result.qr_code_id || result.qr_codes)) {
-                setTimeout(() => location.reload(), 1500);
+            if (result.success === false) {
+                addMessage('assistant', result.response || 'An error occurred');
+                console.error('Chat error:', result.error); // Debug log
+            } else {
+                addMessage('assistant', result.response || 'No response received');
+                
+                // Refresh page if operation was successful
+                if (result.qr_code_id || result.qr_codes) {
+                    setTimeout(() => location.reload(), 1500);
+                }
             }
             
         } catch (error) {
-            addMessage('assistant', 'Sorry, an error occurred.');
+            console.error('Chat error:', error); // Debug log
+            addMessage('assistant', 'Sorry, an error occurred while processing your request.');
         }
     });
 
     function addMessage(role, content) {
+        console.log(`Adding message - Role: ${role}, Content: ${content}`); // Debug log
         const messages = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message ${role} mb-2`;
