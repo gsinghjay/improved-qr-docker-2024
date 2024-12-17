@@ -67,23 +67,23 @@ def redirect_qr(short_code):
 
 @qr_bp.route('/qr/<int:qr_id>/edit', methods=['GET', 'POST'])
 def edit_qr(qr_id):
-    """Handle QR code editing requests.
-    
-    Args:
-        qr_id (int): ID of the QR code to edit
-        
-    Returns:
-        Response: Rendered edit form or redirect after update
-    """
+    """Handle QR code editing requests."""
     qr_code = QRCode.query.get_or_404(qr_id)
     
     if request.method == 'POST':
+        # Validate filename if provided
+        new_filename = request.form.get('filename')
+        if new_filename and not QRCodeService.validate_filename(new_filename):
+            flash('Invalid filename. Use only letters, numbers, hyphens and underscores.', 'error')
+            return render_template('edit.html', qr_code=qr_code)
+
         qr_code = QRCodeService.update_qr_code(
             qr_code=qr_code,
             url=request.form['url'],
             fill_color=request.form.get('fill_color', 'red'),
             back_color=request.form.get('back_color', 'white'),
             description=request.form.get('description', ''),
+            filename=new_filename,
             is_active='is_active' in request.form,
             qr_code_dir=current_app.config['QR_CODE_DIR']
         )

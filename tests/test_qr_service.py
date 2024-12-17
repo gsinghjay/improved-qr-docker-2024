@@ -25,7 +25,7 @@ def test_update_qr_code(app, session):
     """Test QR code updating."""
     with app.app_context():
         # Create initial QR code
-        qr_code, _ = QRCodeService.create_qr_code(
+        qr_code, path = QRCodeService.create_qr_code(
             url="https://example.com",
             is_dynamic=False,
             fill_color="red",
@@ -33,6 +33,18 @@ def test_update_qr_code(app, session):
             description="Original",
             qr_code_dir=app.config['QR_CODE_DIR']
         )
+        
+        # Generate the initial QR code file
+        QRCodeService.generate_qr_image(
+            url=qr_code.url,
+            path=path,
+            fill_color=qr_code.fill_color,
+            back_color=qr_code.back_color
+        )
+        
+        original_filename = qr_code.filename
+        new_filename = "updated_test.png"
+        qr_code_dir = Path(app.config['QR_CODE_DIR'])
         
         # Update QR code
         updated_qr = QRCodeService.update_qr_code(
@@ -42,12 +54,16 @@ def test_update_qr_code(app, session):
             back_color="yellow",
             description="Updated",
             is_active=True,
-            qr_code_dir=app.config['QR_CODE_DIR']
+            filename=new_filename,
+            qr_code_dir=qr_code_dir
         )
         
         assert updated_qr.url == "https://updated.com"
         assert updated_qr.fill_color == "blue"
         assert updated_qr.description == "Updated"
+        assert updated_qr.filename == new_filename
+        assert not (qr_code_dir / original_filename).exists()
+        assert (qr_code_dir / new_filename).exists()
 
 def test_delete_qr_code(app, session):
     """Test QR code deletion."""
@@ -84,8 +100,7 @@ def test_increment_access_count(app, session):
 def test_update_qr_code_dynamic(app, session):
     """Test updating dynamic QR code."""
     with app.app_context():
-        # Create initial dynamic QR code
-        qr_code, _ = QRCodeService.create_qr_code(
+        qr_code, path = QRCodeService.create_qr_code(
             url="https://example.com",
             is_dynamic=True,
             fill_color="red",
@@ -94,7 +109,18 @@ def test_update_qr_code_dynamic(app, session):
             qr_code_dir=app.config['QR_CODE_DIR']
         )
         
-        # Update QR code
+        # Generate the initial QR code file
+        QRCodeService.generate_qr_image(
+            url=qr_code.url,
+            path=path,
+            fill_color=qr_code.fill_color,
+            back_color=qr_code.back_color
+        )
+        
+        original_filename = qr_code.filename
+        new_filename = "updated_dynamic_test.png"
+        qr_code_dir = Path(app.config['QR_CODE_DIR'])
+        
         updated_qr = QRCodeService.update_qr_code(
             qr_code=qr_code,
             url="https://updated.com",
@@ -102,12 +128,78 @@ def test_update_qr_code_dynamic(app, session):
             back_color="yellow",
             description="Updated",
             is_active=True,
-            qr_code_dir=app.config['QR_CODE_DIR']
+            filename=new_filename,
+            qr_code_dir=qr_code_dir
         )
         
         assert updated_qr.url == "https://updated.com"
         assert updated_qr.is_dynamic == True
         assert updated_qr.short_code is not None
+        assert updated_qr.filename == new_filename
+        assert not (qr_code_dir / original_filename).exists()
+        assert (qr_code_dir / new_filename).exists()
+
+def test_update_qr_code_same_filename(app, session):
+    """Test updating QR code without changing filename."""
+    with app.app_context():
+        qr_code, path = QRCodeService.create_qr_code(
+            url="https://example.com",
+            is_dynamic=False,
+            fill_color="red",
+            back_color="white",
+            description="Original",
+            qr_code_dir=app.config['QR_CODE_DIR']
+        )
+        
+        # Generate the initial QR code file
+        QRCodeService.generate_qr_image(
+            url=qr_code.url,
+            path=path,
+            fill_color=qr_code.fill_color,
+            back_color=qr_code.back_color
+        )
+        
+        original_filename = qr_code.filename
+        qr_code_dir = Path(app.config['QR_CODE_DIR'])
+        
+        updated_qr = QRCodeService.update_qr_code(
+            qr_code=qr_code,
+            url="https://updated.com",
+            fill_color="blue",
+            back_color="yellow",
+            description="Updated",
+            is_active=True,
+            filename=original_filename,
+            qr_code_dir=qr_code_dir
+        )
+        
+        assert updated_qr.url == "https://updated.com"
+        assert updated_qr.filename == original_filename
+        assert (qr_code_dir / original_filename).exists()
+
+def test_update_qr_code_invalid_filename(app, session):
+    """Test updating QR code with invalid filename."""
+    with app.app_context():
+        qr_code, _ = QRCodeService.create_qr_code(
+            url="https://example.com",
+            is_dynamic=False,
+            fill_color="red",
+            back_color="white",
+            description="Original",
+            qr_code_dir=app.config['QR_CODE_DIR']
+        )
+        
+        with pytest.raises(ValueError, match="Invalid filename format"):
+            QRCodeService.update_qr_code(
+                qr_code=qr_code,
+                url="https://updated.com",
+                fill_color="blue",
+                back_color="yellow",
+                description="Updated",
+                is_active=True,
+                filename="invalid/filename.png",
+                qr_code_dir=app.config['QR_CODE_DIR']
+            )
 
 def test_validate_url(app):
     """Test URL validation."""
