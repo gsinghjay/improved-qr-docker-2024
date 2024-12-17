@@ -1,36 +1,101 @@
 {% extends "base.html" %}
 
 {% block content %}
-{# Template for editing existing QR codes #}
 <div class="row">
-    <div class="col-md-6 offset-md-3">
+    <div class="col-md-8 offset-md-2">
         <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Edit QR Code</h5>
+                <div class="btn-group">
+                    <a href="{{ url_for('qr.view_qr_details', qr_id=qr_code.id) }}" class="btn btn-info">
+                        <i class="bi bi-eye"></i> View
+                    </a>
+                    <a href="{{ url_for('qr.index') }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                </div>
+            </div>
             <div class="card-body">
-                <h5 class="card-title">Edit QR Code</h5>
-                <form action="{{ url_for('qr.edit_qr', qr_id=qr_code.id) }}" method="POST">
-                    <div class="mb-3">
-                        <label for="url" class="form-label">URL</label>
-                        <input type="url" class="form-control" id="url" name="url" value="{{ qr_code.url }}" required>
+                <div class="row mb-4">
+                    <div class="col-md-4 text-center">
+                        <img src="{{ url_for('qr.serve_qr_code', filename=qr_code.filename) }}" 
+                             alt="QR Code for {{ qr_code.description or qr_code.url }}"
+                             class="img-fluid mb-2"
+                             style="max-width: 200px;">
+                        <div class="text-muted">Current QR Code</div>
                     </div>
-                    {% if qr_code.is_dynamic %}
-                    <div class="mb-3">
-                        <p class="text-muted">Short Code: {{ qr_code.short_code }}</p>
-                        <p class="text-muted">Access Count: {{ qr_code.access_count }}</p>
+                    <div class="col-md-8">
+                        <form action="{{ url_for('qr.edit_qr', qr_id=qr_code.id) }}" method="POST">
+                            <div class="mb-3">
+                                <label for="url" class="form-label">URL</label>
+                                <input type="url" class="form-control" id="url" name="url" 
+                                       value="{{ qr_code.url }}" required>
+                            </div>
+                            {% if qr_code.is_dynamic %}
+                            <div class="mb-3">
+                                <div class="alert alert-info">
+                                    <strong>Short Code:</strong> {{ qr_code.short_code }}<br>
+                                    <strong>Access Count:</strong> {{ qr_code.access_count }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="2">{{ qr_code.description }}</textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="fill_color" class="form-label">Fill Color</label>
+                                        <input type="color" class="form-control" id="fill_color" 
+                                               name="fill_color" value="{{ qr_code.fill_color }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="back_color" class="form-label">Background Color</label>
+                                        <input type="color" class="form-control" id="back_color" 
+                                               name="back_color" value="{{ qr_code.back_color }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input" id="is_active" 
+                                           name="is_active" {% if qr_code.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_active">Active</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="filename" class="form-label">Image Filename</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="filename" name="filename" 
+                                           value="{{ qr_code.filename }}" pattern="[a-zA-Z0-9_-]+\.png" 
+                                           title="Only letters, numbers, hyphens and underscores allowed"
+                                           required>
+                                    <button class="btn btn-outline-secondary" type="button" 
+                                            onclick="document.getElementById('filename').value = '{{ qr_code.generate_seo_filename() }}'">
+                                        Generate SEO Name
+                                    </button>
+                                </div>
+                                <small class="text-muted">This will be used as the image filename and for SEO purposes</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="alt_text" class="form-label">Image Alt Text</label>
+                                <input type="text" class="form-control" id="alt_text" name="alt_text" 
+                                       value="QR Code for {{ qr_code.description or qr_code.url }}"
+                                       placeholder="Descriptive text for the QR code image">
+                                <small class="text-muted">Helps with accessibility and SEO</small>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Update QR Code
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                    {% endif %}
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description">{{ qr_code.description }}</textarea>
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {% if qr_code.is_active %}checked{% endif %}>
-                        <label class="form-check-label" for="is_active">Active</label>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Update QR Code</button>
-                        <a href="{{ url_for('qr.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
