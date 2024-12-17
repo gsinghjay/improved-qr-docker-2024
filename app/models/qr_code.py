@@ -41,11 +41,6 @@ class QRCode(db.Model):
     is_dynamic = db.Column(db.Boolean, default=False)
     short_code = db.Column(db.String(16), unique=True)
 
-    def __init__(self, **kwargs):
-        super(QRCode, self).__init__(**kwargs)
-        if self.is_dynamic and not self.short_code:
-            self.short_code = self.generate_short_code()
-
     def generate_short_code(self):
         """Generate a unique short code for dynamic QR codes.
         
@@ -56,6 +51,22 @@ class QRCode(db.Model):
             code = secrets.token_urlsafe(8)[:8]
             if not QRCode.query.filter_by(short_code=code).first():
                 return code
+
+    def generate_seo_filename(self):
+        """Generate an SEO-friendly filename based on description or URL."""
+        base = self.description or self.url
+        # Convert to lowercase and replace spaces/special chars with hyphens
+        safe_name = "".join(c if c.isalnum() else "-" for c in base.lower())
+        # Remove consecutive hyphens and trim
+        safe_name = "-".join(filter(None, safe_name.split("-")))[:50]
+        return f"qr-{safe_name}-{self.id}.png"
+
+    def __init__(self, **kwargs):
+        super(QRCode, self).__init__(**kwargs)
+        if self.is_dynamic and not self.short_code:
+            self.short_code = self.generate_short_code()
+        if not self.filename:
+            self.filename = self.generate_seo_filename()
 
     def __repr__(self):
         return f'<QRCode {self.id}: {self.url}>' 
