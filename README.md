@@ -109,8 +109,11 @@ docker-compose up --build
 # Install test dependencies
 pip install -r requirements.txt
 
-# Run tests with coverage
+# Run tests with coverage report
 pytest tests/ --cov=app -v
+
+# Run tests without coverage
+pytest tests/ -v
 
 # Run specific test file
 pytest tests/test_qr_controller.py -v
@@ -119,14 +122,26 @@ pytest tests/test_qr_controller.py -v
 ### Test Structure
 - `tests/conftest.py`: Test fixtures and configuration
 - `tests/test_qr_controller.py`: Controller tests
-- `pytest.ini`: Pytest configuration
+- `pytest.ini`: Test discovery and configuration
+
+### Coverage Reports
+Coverage reports are available when running tests locally:
+```bash
+# Generate detailed coverage report
+pytest tests/ --cov=app --cov-report=term-missing -v
+```
+
+This will show:
+- Percentage of code covered by tests
+- Lines that are not covered
+- Module-by-module breakdown of coverage
 
 ### GitHub Actions CI
 The project includes automated testing via GitHub Actions:
 - Runs on every push and pull request
 - Uses PostgreSQL service container
-- Generates coverage reports
-- Uploads results to Codecov
+- Executes the full test suite
+- Validates code functionality across different environments
 
 ## Environment Variables
 
