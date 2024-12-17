@@ -14,4 +14,4 @@ migrate = Migrate(app, db)
 cli = FlaskGroup(app)
 
 if __name__ == '__main__':
-    cli() 
+    cli()
