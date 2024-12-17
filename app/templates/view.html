@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">QR Code Details</h5>
+                <div class="text-center mb-4">
+                    <img src="{{ url_for('qr.serve_qr_code', filename=qr_code.filename) }}" alt="QR Code" style="width: 200px;">
+                </div>
+                <div class="mb-3">
+                    <h6>URL</h6>
+                    <p><a href="{{ qr_code.url }}" target="_blank">{{ qr_code.url }}</a></p>
+                </div>
+                {% if qr_code.is_dynamic %}
+                <div class="mb-3">
+                    <h6>Short Code</h6>
+                    <p>{{ qr_code.short_code }}</p>
+                    <h6>Access Count</h6>
+                    <p>{{ qr_code.access_count }}</p>
+                </div>
+                {% endif %}
+                <div class="mb-3">
+                    <h6>Created At</h6>
+                    <p>{{ qr_code.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                {% if qr_code.description %}
+                <div class="mb-3">
+                    <h6>Description</h6>
+                    <p>{{ qr_code.description }}</p>
+                </div>
+                {% endif %}
+                <div class="mb-3">
+                    <h6>Status</h6>
+                    <p>
+                        <span class="badge {% if qr_code.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ 'Active' if qr_code.is_active else 'Inactive' }}
+                        </span>
+                    </p>
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('qr.index') }}" class="btn btn-secondary">Back</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -20,11 +20,11 @@ RUN mkdir logs qr_codes && chown myuser:myuser logs qr_codes
 # Copy the rest of the application's source code into the container, setting ownership to 'myuser'
 COPY --chown=myuser:myuser . .
 
+# Set PYTHONPATH to include the app directory
+ENV PYTHONPATH=/app
+
 # Switch to the 'myuser' user to run the application
 USER myuser
 
-# Use the Python interpreter as the entrypoint and the script as the first argument
-# This allows additional command-line arguments to be passed to the script via the docker run command
-ENTRYPOINT ["python", "main.py"]
-# this sets a default argument, its also set in the program but this just illustrates how to use cmd and override it from the terminal
-CMD ["--url","http://github.com/kaw393939"]
+# Run Flask application using the new entry point
+CMD ["python", "run.py"]
