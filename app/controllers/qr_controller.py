@@ -169,7 +169,10 @@ def chat():
     """Handle natural language chat requests for QR code operations."""
     try:
         user_input = request.json.get('message')
+        current_app.logger.info(f"Received chat message: {user_input}")
+        
         if not user_input:
+            current_app.logger.warning("No message provided")
             return jsonify({
                 "success": False,
                 "response": "No message provided"
@@ -177,6 +180,7 @@ def chat():
             
         # Check if Groq API is configured
         if not os.getenv('GROQ_API_KEY'):
+            current_app.logger.error("GROQ_API_KEY not configured")
             return jsonify({
                 "success": False,
                 "response": "LLM service is not configured. Please set GROQ_API_KEY in environment variables."
@@ -184,18 +188,19 @@ def chat():
             
         try:
             llm_service = LLMService()
+            current_app.logger.info("Processing message with LLM service")
             result = llm_service.process_user_request(user_input)
+            current_app.logger.info(f"LLM response: {result}")
             return jsonify(result)
             
         except ValueError as ve:
-            # Handle specific API configuration errors
+            current_app.logger.error(f"LLM configuration error: {str(ve)}")
             return jsonify({
                 "success": False,
                 "response": f"LLM service configuration error: {str(ve)}"
             }), 503
             
         except requests.RequestException as re:
-            # Handle API connection/request errors
             current_app.logger.error(f"Groq API error: {str(re)}")
             return jsonify({
                 "success": False,
@@ -203,7 +208,7 @@ def chat():
             }), 503
             
     except Exception as e:
-        current_app.logger.error(f"Chat error: {str(e)}")
+        current_app.logger.error(f"Unexpected chat error: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e),
