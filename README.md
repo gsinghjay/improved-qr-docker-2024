@@ -11,6 +11,10 @@ A Flask-based QR code generator that creates customizable QR codes for URLs. Bui
 - Modern web interface with Bootstrap
 - Docker containerization for easy deployment
 - Clean architecture with MVC pattern
+- LLM-powered chat interface for natural language QR code operations
+- Support for multiple LLM models (Mixtral, LLaMA 2, Gemma)
+- Persistent chat interface across all pages
+- Model selection and configuration UI
 
 Here's the updated architecture section for the README.md, incorporating the testing infrastructure:
 
@@ -26,7 +30,8 @@ app/
 ├── controllers/         # Request handling and routing
 │   └── qr_controller.py # QR code controller with routes
 ├── services/           # Business logic layer
-│   └── qr_service.py   # QR code service
+│   ├── qr_service.py   # QR code service
+│   └── llm_service.py  # LLM integration service
 ├── templates/          # View templates
 │   ├── base.html      # Base template
 │   ├── index.html     # Home page
@@ -65,7 +70,7 @@ Key directories:
 
 Testing Architecture:
 - **conftest.py**: Provides test fixtures and database setup
-- **test_qr_controller.py**: Controller integration tests
+- **test_qr_controller.py**: Controller tests
 - **pytest.ini**: Test discovery and coverage configuration
 - **GitHub Actions**: Automated testing pipeline with PostgreSQL service
 
@@ -151,6 +156,8 @@ The project includes automated testing via GitHub Actions:
 - `BACK_COLOR` - Default QR code background color
 - `FLASK_ENV` - Flask environment (development/production)
 - `SECRET_KEY` - Flask secret key for sessions
+- `GROQ_API_KEY` - API key for Groq LLM service
+- `GROQ_MODEL` - Selected LLM model (mixtral-8x7b-32768, llama2-70b-4096, or gemma-7b-it)
 
 ## API Endpoints
 
@@ -162,6 +169,8 @@ The project includes automated testing via GitHub Actions:
 - `POST /qr/<id>/delete` - Delete QR code
 - `GET /r/<short_code>` - Redirect from dynamic QR code
 - `GET /qr_codes/<filename>` - Serve QR code image
+- `POST /chat` - Process natural language requests
+- `POST /update_model` - Update LLM model selection
 
 ## Clean Architecture
 
@@ -211,5 +220,42 @@ We follow conventional commits for clear change history:
 - Docker and Docker Compose
 - PostgreSQL database
 - Bootstrap for UI
+
+## LLM Integration
+
+### Available Models
+
+1. **Mixtral 8x7B**
+   - 32K context window
+   - Recommended for general use
+   - Best balance of performance and speed
+
+2. **LLaMA 2 70B**
+   - 4K context window
+   - Highest accuracy
+   - More computational resources
+
+3. **Gemma 7B**
+   - Lightweight model
+   - Fast response times
+   - Good for basic operations
+
+### Chat Interface
+
+The application includes a persistent chat interface that allows:
+- Natural language QR code generation
+- QR code management through conversation
+- Model selection and configuration
+- Status feedback and error handling
+
+### Example Commands
+
+```
+"Create a QR code for https://example.com"
+"Make a dynamic QR code with red fill color"
+"Show me all QR codes"
+"Delete QR code #5"
+"Update QR code description"
+```
 ```
 
