@@ -1,3 +1,9 @@
+"""Controller module for handling QR code-related HTTP requests.
+
+This module defines the routes and request handling logic for the QR code
+generation and management system.
+"""
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory
 from ..models.qr_code import QRCode
 from ..services.qr_service import QRCodeService
@@ -7,11 +13,21 @@ qr_bp = Blueprint('qr', __name__, url_prefix='')
 
 @qr_bp.route('/')
 def index():
+    """Route handler for the home page.
+    
+    Returns:
+        str: Rendered HTML template with list of QR codes
+    """
     qr_codes = QRCode.query.order_by(QRCode.created_at.desc()).all()
     return render_template('index.html', qr_codes=qr_codes)
 
 @qr_bp.route('/generate', methods=['POST'])
 def generate():
+    """Handle QR code generation requests.
+    
+    Returns:
+        Response: Redirect to index page with success/error message
+    """
     url = request.form.get('url')
     is_dynamic = request.form.get('is_dynamic') == 'on'
     
@@ -37,12 +53,28 @@ def generate():
 
 @qr_bp.route('/r/<short_code>')
 def redirect_qr(short_code):
+    """Handle redirection for QR code short codes.
+    
+    Args:
+        short_code (str): The short code to look up
+        
+    Returns:
+        Response: Redirect to the target URL
+    """
     qr_code = QRCode.query.filter_by(short_code=short_code, is_active=True).first_or_404()
     QRCodeService.increment_access_count(qr_code)
     return redirect(qr_code.url)
 
 @qr_bp.route('/qr/<int:qr_id>/edit', methods=['GET', 'POST'])
 def edit_qr(qr_id):
+    """Handle QR code editing requests.
+    
+    Args:
+        qr_id (int): ID of the QR code to edit
+        
+    Returns:
+        Response: Rendered edit form or redirect after update
+    """
     qr_code = QRCode.query.get_or_404(qr_id)
     
     if request.method == 'POST':
@@ -63,6 +95,14 @@ def edit_qr(qr_id):
 
 @qr_bp.route('/qr/<int:qr_id>/delete', methods=['POST'])
 def delete_qr(qr_id):
+    """Handle QR code deletion requests.
+    
+    Args:
+        qr_id (int): ID of the QR code to delete
+        
+    Returns:
+        Response: Redirect to index page
+    """
     qr_code = QRCode.query.get_or_404(qr_id)
     QRCodeService.delete_qr_code(qr_code, current_app.config['QR_CODE_DIR'])
     
@@ -71,15 +111,39 @@ def delete_qr(qr_id):
 
 @qr_bp.route('/qr_codes/<path:filename>')
 def serve_qr_code(filename):
+    """Serve a QR code image file.
+    
+    Args:
+        filename (str): Name of the QR code image file
+        
+    Returns:
+        Response: The requested image file
+    """
     return send_from_directory(current_app.config['QR_CODE_DIR'], filename)
 
 @qr_bp.route('/d/<short_code>')
 def dynamic_redirect(short_code):
+    """Handle redirection for dynamic QR codes.
+    
+    Args:
+        short_code (str): The short code to look up
+        
+    Returns:
+        Response: Redirect to the target URL
+    """
     qr_code = QRCode.query.filter_by(short_code=short_code, is_active=True).first_or_404()
     QRCodeService.increment_access_count(qr_code)
     return redirect(qr_code.redirect_url or qr_code.url)
 
 @qr_bp.route('/qr/<int:qr_id>/view')
 def view_qr_details(qr_id):
+    """Display detailed information about a QR code.
+    
+    Args:
+        qr_id (int): ID of the QR code to view
+        
+    Returns:
+        Response: Rendered template with QR code details
+    """
     qr_code = QRCode.query.get_or_404(qr_id)
     return render_template('view.html', qr_code=qr_code) 

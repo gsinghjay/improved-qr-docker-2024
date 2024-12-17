@@ -1,3 +1,9 @@
+"""Application entry point.
+
+This module serves as the entry point for running the Flask application.
+It configures logging and starts the development server.
+"""
+
 from app import create_app
 from app.utils.qr_generator import setup_logging
 
