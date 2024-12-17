@@ -27,6 +27,7 @@ services:
       - ./logs:/app/logs
       - ./app:/app/app
       - migrations_data:/app/migrations
+      - ./.env:/app/.env
     user: "${UID:-1000}:${GID:-1000}"
     depends_on:
       - db
