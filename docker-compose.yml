@@ -26,6 +26,8 @@ services:
       - ./qr_codes:/app/qr_codes
       - ./logs:/app/logs
       - ./app:/app/app
+      - migrations_data:/app/migrations
+    user: "${UID:-1000}:${GID:-1000}"
     depends_on:
       - db
 
@@ -56,3 +58,4 @@ services:
 volumes:
   postgres_data:
   pgadmin_data:
+  migrations_data:
