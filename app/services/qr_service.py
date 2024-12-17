@@ -48,8 +48,15 @@ class QRCodeService:
     @staticmethod
     def update_qr_code(qr_code, url, fill_color, back_color, description, filename, is_active, qr_code_dir):
         """Update an existing QR code record and regenerate the image if needed."""
-        old_filename = qr_code.filename
+        # Validate new filename if provided
+        if filename and filename != qr_code.filename:
+            if not QRCodeService.validate_filename(filename):
+                raise ValueError("Invalid filename format")
         
+        old_filename = qr_code.filename
+        qr_code_dir = Path(qr_code_dir)  # Convert to Path object
+        
+        # Update QR code attributes
         qr_code.url = url
         qr_code.fill_color = fill_color
         qr_code.back_color = back_color
@@ -58,8 +65,8 @@ class QRCodeService:
 
         # Handle filename update if provided
         if filename and filename != old_filename:
-            old_path = Path(qr_code_dir) / old_filename
-            new_path = Path(qr_code_dir) / filename
+            old_path = qr_code_dir / old_filename
+            new_path = qr_code_dir / filename
             
             # Update filename in database
             qr_code.filename = filename
@@ -70,9 +77,9 @@ class QRCodeService:
         
         db.session.commit()
 
-        # Regenerate QR code image if it's a static QR code
+        # Regenerate QR code image
+        path = qr_code_dir / qr_code.filename
         if not qr_code.is_dynamic:
-            path = Path(qr_code_dir) / qr_code.filename
             generate_qr_code(qr_code.url, path, qr_code.fill_color, qr_code.back_color)
 
         return qr_code
