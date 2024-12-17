@@ -1,4 +1,4 @@
-name: Test QR Code Generator
+name: Tests
 
 on: [push, pull_request]
 
@@ -15,37 +15,24 @@ jobs:
           POSTGRES_DB: qrdb_test
         ports:
           - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+        options: --health-cmd pg_isready --health-interval 10s --health-retries 3
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.12'
           cache: 'pip'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest pytest-cov
-          pip install -r requirements.txt
-
-      - name: Create QR codes directory
-        run: mkdir -p qr_codes
+        run: pip install -r requirements.txt pytest pytest-cov
 
       - name: Run tests
         env:
           DATABASE_URL: postgresql://qruser:qrpassword@localhost:5432/qrdb_test
           QR_CODE_DIR: qr_codes
-          FILL_COLOR: red
-          BACK_COLOR: white
           FLASK_ENV: testing
-          TESTING: true
         run: |
+          mkdir -p qr_codes
           pytest tests/ -v
