@@ -1,6 +1,11 @@
+flask==3.0.2
+flask-sqlalchemy==3.1.1
+psycopg2-binary==2.9.9
 pillow==10.2.0
 pypng==0.20220715.0
 python-dotenv==1.0.1
 qrcode==7.4.2
 typing_extensions==4.10.0
 validators==0.23.2
+Werkzeug==3.0.1
+Flask-Migrate==4.0.5
