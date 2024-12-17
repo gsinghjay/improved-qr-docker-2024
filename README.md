@@ -35,27 +35,38 @@ app/
 └── __init__.py        # Application factory
 ```
 
-## Prerequisites
+## Development
 
-1. Docker and Docker Compose
-2. Git
+### Prerequisites
+- Docker and Docker Compose
+- Python 3.12
+- Git
 
-## Quick Start
-
-1. Clone the repository:
+### Local Setup
 ```bash
-git clone <your-repo-url>
+# Clone repository
+git clone <repository-url>
 cd qr-code-generator
+
+# Create virtual environment (optional)
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+.\venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-2. Build and run with Docker Compose:
+### Docker Setup
 ```bash
+# Build and run services
 docker-compose up --build
-```
 
-3. Access the application:
-- QR Code Generator: http://localhost:5000
-- PgAdmin: http://localhost:5050 (admin@admin.com / admin)
+# Access application
+# Web UI: http://localhost:5000
+# PgAdmin: http://localhost:5050 (admin@admin.com / admin)
+```
 
 ## Environment Variables
 
@@ -77,7 +88,7 @@ docker-compose up --build
 - `GET /r/<short_code>` - Redirect from dynamic QR code
 - `GET /qr_codes/<filename>` - Serve QR code image
 
-## Development
+## Clean Architecture
 
 The project follows clean architecture principles:
 
@@ -89,24 +100,34 @@ The project follows clean architecture principles:
 
 ## Contributing
 
-1. Create a feature branch:
+### Git Workflow
 ```bash
-git checkout -b feature/your-feature-name
-```
+# Create feature branch
+git checkout -b feature/your-feature
 
-2. Make changes following conventional commits:
-```bash
+# Make changes and commit using conventional commits
+git add .
 git commit -m "feat(scope): description"
 git commit -m "fix(scope): description"
-git commit -m "chore(scope): description"
+git commit -m "docs(scope): description"
+
+# Push changes
+git push origin feature/your-feature
+
+# Create pull request on GitHub
 ```
 
-3. Push changes:
-```bash
-git push origin feature/your-feature-name
-```
+### Conventional Commits
 
-4. Create a Pull Request
+We follow conventional commits for clear change history:
+
+- `feat(scope):` New features
+- `fix(scope):` Bug fixes
+- `docs(scope):` Documentation changes
+- `style(scope):` Code style changes
+- `refactor(scope):` Code refactoring
+- `test(scope):` Test changes
+- `chore(scope):` Maintenance tasks
 
 ## License
 
@@ -123,23 +144,5 @@ MIT License
 - Docker and Docker Compose
 - PostgreSQL database
 - Bootstrap for UI
-```
-
-4. Add and commit the updated readme:
-```bash
-git add README.md
-git commit -m "docs: Update README with comprehensive documentation"
-```
-
-5. Create a new branch for development:
-```bash
-git checkout -b develop
-```
-
-6. Set up remote repository (replace with your GitHub URL):
-```bash
-git remote add origin https://github.com/yourusername/qr-code-generator.git
-git push -u origin main
-git push -u origin develop
 ```
 
