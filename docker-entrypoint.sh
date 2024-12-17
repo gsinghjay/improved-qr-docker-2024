@@ -5,15 +5,28 @@ set -e
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL..."
-while ! nc -z db 5432; do
-  sleep 0.1
+until pg_isready -h db -p 5432; do
+  sleep 1
 done
 echo "PostgreSQL is ready!"
 
-# Initialize migrations directory if it doesn't exist
-if [ ! -d "migrations" ]; then
+# Ensure migrations directory and subdirectories exist with correct permissions
+echo "Setting up migrations directory..."
+mkdir -p /app/migrations/versions
+chmod -R 777 /app/migrations
+
+# Initialize migrations directory if env.py doesn't exist
+if [ ! -f "/app/migrations/env.py" ]; then
     echo "Initializing migrations directory..."
+    # Remove existing directory contents if any
+    rm -rf /app/migrations/*
+    
+    export FLASK_APP=manage.py
     flask db init
+    
+    # Create initial migration
+    echo "Creating initial migration..."
+    flask db migrate -m "Initial migration"
 fi
 
 # Run database migrations
@@ -22,4 +35,4 @@ flask db upgrade
 
 # Start the Flask application
 echo "Starting Flask application..."
-python run.py 
+python run.py
