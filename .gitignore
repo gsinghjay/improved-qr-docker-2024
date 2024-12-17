@@ -54,6 +54,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 pytest_debug.log
+coverage_html/
 
 # Translations
 *.mo
