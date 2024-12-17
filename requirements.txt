@@ -12,3 +12,4 @@ typing_extensions==4.10.0
 validators==0.23.2
 Werkzeug==3.0.1
 Flask-Migrate==4.0.5
+requests==2.31.0
