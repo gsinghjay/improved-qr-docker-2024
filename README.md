@@ -229,33 +229,73 @@ We follow conventional commits for clear change history:
    - 32K context window
    - Recommended for general use
    - Best balance of performance and speed
+   - Default model for the application
 
 2. **LLaMA 2 70B**
    - 4K context window
    - Highest accuracy
    - More computational resources
+   - Best for complex operations
 
 3. **Gemma 7B**
    - Lightweight model
    - Fast response times
    - Good for basic operations
+   - Efficient resource usage
 
-### Chat Interface
+### Chat Interface Features
 
 The application includes a persistent chat interface that allows:
 - Natural language QR code generation
 - QR code management through conversation
-- Model selection and configuration
-- Status feedback and error handling
+- Real-time model selection and configuration
+- Detailed status feedback and error handling
+- Function-based operations for reliability
 
 ### Example Commands
 
 ```
+# QR Code Generation
 "Create a QR code for https://example.com"
-"Make a dynamic QR code with red fill color"
-"Show me all QR codes"
+"Generate a dynamic QR code for my website"
+"Make a red QR code pointing to google.com"
+
+# QR Code Management
+"Show me all my QR codes"
+"List active QR codes"
+"View my latest QR code"
+
+# QR Code Updates
+"Update QR code #5's description"
+"Change QR code colors"
+"Make QR code #3 dynamic"
+
+# QR Code Deletion
 "Delete QR code #5"
-"Update QR code description"
+"Remove inactive QR codes"
+```
+
+### LLM Configuration
+
+Environment variables for LLM setup:
+```bash
+# Required
+GROQ_API_KEY=your-api-key
+GROQ_MODEL=mixtral-8x7b-32768  # or llama2-70b-4096, gemma-7b-it
+
+# Optional
+QR_CODE_DIR=qr_codes  # Directory for QR code storage
+```
+
+### Function Calling
+
+The LLM integration uses structured function calling for reliable operations:
+
+```python
+# Available Functions
+create_qr_code(url, is_dynamic=False, fill_color="red", back_color="white")
+list_qr_codes()
+delete_qr_code(qr_id)
 ```
 ```
 
