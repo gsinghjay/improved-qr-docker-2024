@@ -14,7 +14,7 @@ A Flask-based QR code generator that creates customizable QR codes for URLs. Bui
 
 ## Architecture
 
-The application follows the Model-View-Controller (MVC) pattern with additional service layer:
+The application follows the Model-View-Controller (MVC) pattern with additional service layer and Docker containerization:
 
 ```
 app/
@@ -33,7 +33,26 @@ app/
 ├── utils/             # Utility functions
 │   └── qr_generator.py # QR code generation utilities
 └── __init__.py        # Application factory
+
+project_root/
+├── Dockerfile         # Container configuration
+├── docker-compose.yml # Multi-container Docker setup
+├── logs/             # Application logs directory
+│   └── docker_logs.txt # Docker runtime logs
+├── qr_codes/         # Generated QR code storage
+├── requirements.txt  # Python dependencies
+└── run.py           # Application entry point
 ```
+
+The application is containerized using Docker with three main services:
+- **qr_code_app**: Flask application container (Python 3.12)
+- **db**: PostgreSQL 15 database container
+- **pgadmin**: PostgreSQL administration interface
+
+Key directories:
+- **/logs**: Contains application logs, mounted as a Docker volume
+- **/qr_codes**: Stores generated QR code images, mounted as a Docker volume
+- **/app**: Core application code, mounted for development hot-reloading
 
 ## Development
 
