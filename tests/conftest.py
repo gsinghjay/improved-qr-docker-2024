@@ -3,10 +3,16 @@
 This module contains pytest fixtures that can be used across all tests.
 """
 
+import os
+import sys
 import pytest
+
+# Add the project root directory to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
 from app import create_app
 from app.models import db as _db
-import os
 
 @pytest.fixture(scope='session')
 def app():
@@ -14,8 +20,8 @@ def app():
     app = create_app()
     app.config.update({
         'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': os.getenv('DATABASE_URL'),
-        'QR_CODE_DIR': os.getenv('QR_CODE_DIR')
+        'SQLALCHEMY_DATABASE_URI': os.getenv('DATABASE_URL', 'sqlite:///:memory:'),
+        'QR_CODE_DIR': os.getenv('QR_CODE_DIR', 'test_qr_codes')
     })
     
     # Create tables
@@ -39,14 +45,15 @@ def db(app):
     return _db
 
 @pytest.fixture(scope='function')
-def session(db):
+def session(app, db):
     """Creates a new database session for each test."""
-    connection = db.engine.connect()
-    transaction = connection.begin()
-    
-    yield db.session
-    
-    # Rollback transaction
-    transaction.rollback()
-    connection.close()
-    db.session.remove()
+    with app.app_context():
+        connection = db.engine.connect()
+        transaction = connection.begin()
+        
+        yield db.session
+        
+        # Rollback transaction
+        transaction.rollback()
+        connection.close()
+        db.session.remove()
