@@ -2,6 +2,10 @@
 
 A Flask-based QR code generator that creates customizable QR codes for URLs. Built with Python, Flask, and Docker, following clean architecture principles.
 
+## Demo
+
+Check out the live demo: [Watch on YouTube](https://youtu.be/XubKq6ifzOA)
+
 ## Features
 
 - Generate QR codes from URLs
