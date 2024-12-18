@@ -7,6 +7,8 @@ QR code operations including creation, updating, deletion, and validation.
 import re
 from pathlib import Path
 from datetime import datetime
+import validators
+from urllib.parse import urlparse
 from ..models.qr_code import QRCode
 from ..models import db
 from ..utils.qr_generator import generate_qr_code, is_valid_url
@@ -116,8 +118,28 @@ class QRCodeService:
 
     @staticmethod
     def validate_url(url):
-        """Validate if a URL is properly formatted."""
-        return is_valid_url(url)
+        """Validate if a URL is properly formatted and uses allowed protocols.
+        
+        Args:
+            url (str): URL to validate
+            
+        Returns:
+            bool: True if URL is valid, False otherwise
+        """
+        if not url:
+            return False
+        
+        try:
+            # Parse URL to check protocol
+            parsed = urlparse(url)
+            if parsed.scheme not in ('http', 'https'):
+                return False
+                
+            # Validate URL format
+            return bool(validators.url(url))
+            
+        except Exception:
+            return False
 
     @staticmethod
     def generate_qr_image(url, path, fill_color, back_color):

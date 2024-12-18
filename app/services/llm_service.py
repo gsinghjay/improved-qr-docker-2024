@@ -246,15 +246,16 @@ class LLMService:
                     json=payload,
                     timeout=30
                 )
-                response.raise_for_status()
                 
-            except requests.exceptions.RequestException as e:
                 if response.status_code == 429:
                     return {
                         "success": False,
-                        "response": "I'm receiving too many requests right now. Please try again in a few seconds.",
-                        "error": str(e)
+                        "response": "I'm receiving too many requests right now. Please try again in a few seconds."
                     }
+                
+                response.raise_for_status()
+                
+            except requests.exceptions.RequestException as e:
                 return {
                     "success": False,
                     "response": "I'm having trouble connecting to my language model. Please try again.",
@@ -346,13 +347,15 @@ class LLMService:
                 
                 return {
                     "qr_code_id": qr_code.id,
-                    "filename": qr_code.filename,
-                    "url": qr_code.url
+                    "url": qr_code.url,
+                    "filename": qr_code.filename
                 }
                 
             except Exception as e:
-                db.session.rollback()
-                raise ValueError(f"Failed to create QR code: {str(e)}")
+                return {
+                    "success": False,
+                    "error": str(e)
+                }
             
         elif function_name == "list_qr_codes":
             qr_codes = QRCode.query.order_by(QRCode.created_at.desc()).all()
