@@ -139,28 +139,15 @@ def dynamic_redirect(short_code):
     return redirect(qr_code.redirect_url or qr_code.url)
 
 @qr_bp.route('/qr/<int:qr_id>/view')
-def view_qr_details(qr_id):
-    """Display detailed information about a QR code."""
+def view_qr(qr_id):
     qr_code = QRCode.query.get_or_404(qr_id)
     
-    # Check if Groq API is configured and accessible
-    groq_enabled = False
-    current_model = None
-    
-    try:
-        llm_service = LLMService()
-        # Try a simple API test call
-        test_response = llm_service._make_api_request([
-            {"role": "user", "content": "test"}
-        ])
-        groq_enabled = True
-        current_model = os.getenv('GROQ_MODEL', 'mixtral-8x7b-32768')
-    except Exception as e:
-        # Log the error but don't expose it to the user
-        current_app.logger.error(f"Groq API error: {str(e)}")
+    # Check if GROQ_API_KEY exists and is not empty
+    groq_enabled = bool(os.getenv('GROQ_API_KEY'))
+    current_model = os.getenv('GROQ_MODEL', 'mixtral-8x7b-32768')
     
     return render_template('view.html', 
-                         qr_code=qr_code,
+                         qr_code=qr_code, 
                          groq_enabled=groq_enabled,
                          current_model=current_model)
 
@@ -169,7 +156,10 @@ def chat():
     """Handle natural language chat requests for QR code operations."""
     try:
         user_input = request.json.get('message')
+        current_app.logger.info(f"Received chat message: {user_input}")
+        
         if not user_input:
+            current_app.logger.warning("No message provided")
             return jsonify({
                 "success": False,
                 "response": "No message provided"
@@ -177,6 +167,7 @@ def chat():
             
         # Check if Groq API is configured
         if not os.getenv('GROQ_API_KEY'):
+            current_app.logger.error("GROQ_API_KEY not configured")
             return jsonify({
                 "success": False,
                 "response": "LLM service is not configured. Please set GROQ_API_KEY in environment variables."
@@ -184,18 +175,19 @@ def chat():
             
         try:
             llm_service = LLMService()
+            current_app.logger.info("Processing message with LLM service")
             result = llm_service.process_user_request(user_input)
+            current_app.logger.info(f"LLM response: {result}")
             return jsonify(result)
             
         except ValueError as ve:
-            # Handle specific API configuration errors
+            current_app.logger.error(f"LLM configuration error: {str(ve)}")
             return jsonify({
                 "success": False,
                 "response": f"LLM service configuration error: {str(ve)}"
             }), 503
             
         except requests.RequestException as re:
-            # Handle API connection/request errors
             current_app.logger.error(f"Groq API error: {str(re)}")
             return jsonify({
                 "success": False,
@@ -203,7 +195,7 @@ def chat():
             }), 503
             
     except Exception as e:
-        current_app.logger.error(f"Chat error: {str(e)}")
+        current_app.logger.error(f"Unexpected chat error: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e),

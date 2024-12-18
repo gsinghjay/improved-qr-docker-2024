@@ -7,207 +7,465 @@ enabling natural language interactions with the system's functionality.
 import os
 import json
 import requests
-from typing import Dict, Any, Optional
+import time
+from flask import current_app, url_for
+from typing import Dict, Any, List, Optional
 from ..models.qr_code import QRCode
-from ..services.qr_service import QRCodeService
-from flask import current_app
+from ..models import db
+from sqlalchemy import desc
+from datetime import datetime
+from pathlib import Path
+from functools import lru_cache
+from urllib.parse import urlparse, urljoin
+import validators
 
 class LLMService:
-    """Service class for handling LLM-based interactions."""
+    """Service for handling LLM operations using Groq API."""
+    
+    # Define available functions for QR operations
+    AVAILABLE_FUNCTIONS = {
+        "create_qr_code": {
+            "name": "create_qr_code",
+            "description": "Create a new QR code",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The URL to encode in the QR code"
+                    },
+                    "is_dynamic": {
+                        "type": "boolean",
+                        "description": "Whether to create a dynamic QR code"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Optional description for the QR code"
+                    },
+                    "fill_color": {
+                        "type": "string",
+                        "description": "Color for QR code fill (e.g., '#000000')"
+                    },
+                    "back_color": {
+                        "type": "string",
+                        "description": "Color for QR code background (e.g., '#FFFFFF')"
+                    }
+                },
+                "required": ["url"]
+            }
+        },
+        "list_qr_codes": {
+            "name": "list_qr_codes",
+            "description": "List all QR codes",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        },
+        "delete_qr_code": {
+            "name": "delete_qr_code",
+            "description": "Delete a QR code by ID",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "qr_id": {
+                        "type": "integer",
+                        "description": "ID of the QR code to delete"
+                    }
+                },
+                "required": ["qr_id"]
+            }
+        },
+        "search_qr_codes": {
+            "name": "search_qr_codes",
+            "description": "Search QR codes by various criteria",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "Filter by URL (partial match)"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Filter by description (partial match)"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "description": "Filter by active status"
+                    },
+                    "created_after": {
+                        "type": "string",
+                        "description": "Filter by creation date (ISO format)"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return"
+                    }
+                }
+            }
+        },
+        "update_qr_code": {
+            "name": "update_qr_code",
+            "description": "Update an existing QR code",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "qr_id": {
+                        "type": "integer",
+                        "description": "ID of the QR code to update"
+                    },
+                    "url": {
+                        "type": "string",
+                        "description": "New URL for the QR code"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "New description"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "description": "Set active status"
+                    },
+                    "fill_color": {
+                        "type": "string",
+                        "description": "New fill color"
+                    },
+                    "back_color": {
+                        "type": "string",
+                        "description": "New background color"
+                    }
+                },
+                "required": ["qr_id"]
+            }
+        }
+    }
     
     def __init__(self):
         """Initialize the LLM service with API configuration."""
         self.api_key = os.getenv('GROQ_API_KEY')
-        self.api_url = "https://api.groq.com/v1/chat/completions"
-        self.model = "llama3-8b-8192"
-        
         if not self.api_key:
             raise ValueError("GROQ_API_KEY environment variable not set")
+            
+        self.api_url = "https://api.groq.com/openai/v1/chat/completions"
+        self.model = os.getenv('GROQ_MODEL', 'mixtral-8x7b-32768')
+        self.rate_limit_delay = 1.0  # Seconds between API calls
+        self._last_api_call = 0
+        current_app.logger.info(f"LLM Service initialized with model: {self.model}")
+        
+    def _rate_limit(self):
+        """Implement rate limiting for API calls."""
+        now = time.time()
+        time_since_last_call = now - self._last_api_call
+        if time_since_last_call < self.rate_limit_delay:
+            time.sleep(self.rate_limit_delay - time_since_last_call)
+        self._last_api_call = time.time()
 
-    def _make_api_request(self, messages: list) -> Dict[str, Any]:
-        """Make a request to the Groq API.
-        
-        Args:
-            messages (list): List of message dictionaries for the conversation
-            
-        Returns:
-            dict: The API response
-            
-        Raises:
-            requests.RequestException: If the API request fails
-        """
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        data = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": 0.7,
-            "max_tokens": 1000
-        }
-        
-        response = requests.post(self.api_url, headers=headers, json=data)
-        response.raise_for_status()
-        return response.json()
+    @lru_cache(maxsize=100)
+    def _get_cached_response(self, user_input: str) -> Optional[Dict]:
+        """Get cached response for identical queries."""
+        return None  # Cache implementation
 
-    def process_user_request(self, user_input: str) -> Dict[str, Any]:
-        """Process a natural language request and execute corresponding QR code operations.
-        
-        Args:
-            user_input (str): Natural language request from the user
+    def format_qr_code_response(self, qr_codes: List[Dict]) -> str:
+        """Format QR code list for better readability."""
+        if not qr_codes:
+            return "No QR codes found."
             
-        Returns:
-            dict: Result of the operation including success status and response
-        """
+        response = "Here are the QR codes:\n\n"
+        for qr in qr_codes:
+            response += f"📱 QR Code #{qr['id']}\n"
+            response += f"🔗 URL: {qr['url']}\n"
+            if qr.get('description'):
+                response += f"📝 Description: {qr['description']}\n"
+            response += f"📅 Created: {qr['created_at']}\n"
+            response += f"👁️ Views: {qr.get('access_count', 0)}\n"
+            response += "-------------------\n"
+        return response
+
+    def format_url(self, url: str) -> str:
+        """Format and validate URL to ensure proper structure."""
+        if not url:
+            raise ValueError("URL cannot be empty")
+            
+        # Add scheme if missing
+        if not url.startswith(('http://', 'https://')):
+            url = f'https://{url}'
+            
+        # Validate URL structure
+        parsed = urlparse(url)
+        if not all([parsed.scheme, parsed.netloc]):
+            raise ValueError("Invalid URL format")
+            
+        # Validate domain
+        if not validators.domain(parsed.netloc):
+            raise ValueError(f"Invalid domain: {parsed.netloc}")
+            
+        return url
+
+    def process_user_request(self, user_input: str) -> dict:
+        """Process a user request through the LLM with function calling."""
         try:
-            # Create system message defining available functions
-            system_message = {
-                "role": "system",
-                "content": """You are a QR code management assistant. You can help with the following operations:
-                1. Create new QR codes
-                2. List existing QR codes
-                3. Update QR code properties
-                4. Delete QR codes
-                5. Get QR code statistics
-                
-                Parse the user's request and respond with the appropriate function call."""
+            # Check cache first
+            cached_response = self._get_cached_response(user_input)
+            if cached_response:
+                return cached_response
+
+            # Apply rate limiting
+            self._rate_limit()
+
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
             }
             
-            # Add user's request
-            messages = [
-                system_message,
-                {"role": "user", "content": user_input}
-            ]
-            
-            # Get LLM response
-            response = self._make_api_request(messages)
-            
-            # Extract the assistant's response
-            assistant_response = response['choices'][0]['message']['content']
-            
-            # Parse the response and execute corresponding function
-            return self._execute_qr_operation(assistant_response, user_input)
-            
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "response": "Sorry, I encountered an error processing your request."
+            system_prompt = """You are a helpful QR code assistant. You can:
+            1. Create new QR codes
+            2. List existing QR codes
+            3. Search for specific QR codes
+            4. Update QR code properties
+            5. Delete QR codes
+
+            Always validate URLs and provide clear, friendly responses.
+            For errors, explain what went wrong and how to fix it."""
+
+            payload = {
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_input}
+                ],
+                "functions": list(self.AVAILABLE_FUNCTIONS.values()),
+                "function_call": "auto",
+                "temperature": 0.7
             }
 
-    def _execute_qr_operation(self, llm_response: str, original_request: str) -> Dict[str, Any]:
-        """Execute the QR code operation based on LLM response.
-        
-        Args:
-            llm_response (str): The LLM's interpreted response
-            original_request (str): The original user request
-            
-        Returns:
-            dict: Result of the operation
-        """
-        try:
-            # Create new QR code
-            if "create" in llm_response.lower() and "qr" in llm_response.lower():
-                # Extract URL and other parameters from the response
-                params = self._extract_qr_parameters(llm_response)
-                
-                qr_code, path = QRCodeService.create_qr_code(
-                    url=params.get('url', ''),
-                    is_dynamic=params.get('is_dynamic', False),
-                    fill_color=params.get('fill_color', 'black'),
-                    back_color=params.get('back_color', 'white'),
-                    description=params.get('description', ''),
-                    qr_code_dir=current_app.config['QR_CODE_DIR']
+            try:
+                response = requests.post(
+                    self.api_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=30
                 )
+                response.raise_for_status()
                 
-                return {
-                    "success": True,
-                    "response": f"Created new QR code for URL: {qr_code.url}",
-                    "qr_code_id": qr_code.id
-                }
-                
-            # List QR codes
-            elif "list" in llm_response.lower() or "show" in llm_response.lower():
-                qr_codes = QRCode.query.order_by(QRCode.created_at.desc()).all()
-                return {
-                    "success": True,
-                    "response": f"Found {len(qr_codes)} QR codes",
-                    "qr_codes": [{"id": qr.id, "url": qr.url, "created_at": qr.created_at} for qr in qr_codes]
-                }
-                
-            # Delete QR code
-            elif "delete" in llm_response.lower():
-                qr_id = self._extract_qr_id(llm_response)
-                qr_code = QRCode.query.get(qr_id)
-                
-                if qr_code:
-                    QRCodeService.delete_qr_code(qr_code, current_app.config['QR_CODE_DIR'])
-                    return {
-                        "success": True,
-                        "response": f"Deleted QR code {qr_id}"
-                    }
-                else:
+            except requests.exceptions.RequestException as e:
+                if response.status_code == 429:
                     return {
                         "success": False,
-                        "response": f"QR code {qr_id} not found"
+                        "response": "I'm receiving too many requests right now. Please try again in a few seconds.",
+                        "error": str(e)
                     }
-                    
-            else:
                 return {
                     "success": False,
-                    "response": "I'm not sure how to handle that request. Please try rephrasing it."
+                    "response": "I'm having trouble connecting to my language model. Please try again.",
+                    "error": str(e)
                 }
-                
+
+            result = response.json()
+            message = result['choices'][0]['message']
+
+            if 'function_call' in message:
+                function_call = message['function_call']
+                function_name = function_call['name']
+                function_args = json.loads(function_call['arguments'])
+
+                try:
+                    result = self._execute_function(function_name, function_args)
+                    
+                    # Enhanced response formatting
+                    if function_name == 'create_qr_code':
+                        response_text = (
+                            f"✅ Created QR code #{result['qr_code_id']}\n"
+                            f"🔗 URL: {result['url']}\n"
+                            f"📁 Filename: {result['filename']}"
+                        )
+                    elif function_name == 'list_qr_codes':
+                        response_text = self.format_qr_code_response(result['qr_codes'])
+                    else:
+                        response_text = f"I've completed the '{function_name.replace('_', ' ')}' operation successfully."
+                    
+                    return {
+                        "success": True,
+                        "response": response_text,
+                        "function_call": {
+                            "name": function_name,
+                            "result": result
+                        }
+                    }
+                    
+                except ValueError as ve:
+                    return {
+                        "success": False,
+                        "response": f"⚠️ Error: {str(ve)}. Please try again with a valid URL.",
+                        "error": str(ve)
+                    }
+
+            return {
+                "success": True,
+                "response": message['content']
+            }
+
         except Exception as e:
+            current_app.logger.error(f"Error processing request: {str(e)}")
             return {
                 "success": False,
-                "error": str(e),
-                "response": "Error executing QR code operation"
+                "response": "I encountered an unexpected error. Please try again.",
+                "error": str(e)
             }
-
-    def _extract_qr_parameters(self, llm_response: str) -> Dict[str, Any]:
-        """Extract QR code parameters from LLM response.
+    
+    def _execute_function(self, function_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the specified function with given arguments."""
+        from app.services.qr_service import QRCodeService
+        qr_service = QRCodeService()
         
-        Args:
-            llm_response (str): The LLM's response to parse
+        if function_name == "create_qr_code":
+            try:
+                # Format and validate URL
+                url = self.format_url(args["url"])
+                
+                qr_code = QRCode(
+                    url=url,
+                    is_dynamic=args.get("is_dynamic", False),
+                    description=args.get("description", ""),
+                    fill_color=args.get("fill_color", "#000000"),
+                    back_color=args.get("back_color", "#FFFFFF")
+                )
+                
+                db.session.add(qr_code)
+                db.session.commit()
+                
+                # Generate QR code image
+                path = Path(current_app.config['QR_CODE_DIR']) / qr_code.filename
+                if not QRCodeService.generate_qr_image(
+                    qr_code.url,
+                    path,
+                    qr_code.fill_color,
+                    qr_code.back_color
+                ):
+                    raise ValueError("Failed to generate QR code image")
+                
+                return {
+                    "qr_code_id": qr_code.id,
+                    "filename": qr_code.filename,
+                    "url": qr_code.url
+                }
+                
+            except Exception as e:
+                db.session.rollback()
+                raise ValueError(f"Failed to create QR code: {str(e)}")
             
-        Returns:
-            dict: Extracted parameters for QR code creation
-        """
-        # Add another message to get structured parameters
-        messages = [
-            {"role": "system", "content": "Extract QR code parameters from the following text and return them in JSON format with url, is_dynamic, fill_color, back_color, and description fields."},
-            {"role": "user", "content": llm_response}
-        ]
-        
-        response = self._make_api_request(messages)
-        try:
-            # Try to parse JSON from the response
-            params_str = response['choices'][0]['message']['content']
-            return json.loads(params_str)
-        except:
-            # Fallback to basic URL extraction if JSON parsing fails
-            import re
-            url_match = re.search(r'https?://\S+', llm_response)
+        elif function_name == "list_qr_codes":
+            qr_codes = QRCode.query.order_by(QRCode.created_at.desc()).all()
             return {
-                "url": url_match.group(0) if url_match else "",
-                "is_dynamic": False,
-                "fill_color": "black",
-                "back_color": "white",
-                "description": ""
+                "qr_codes": [
+                    {
+                        "id": qr.id,
+                        "url": qr.url,
+                        "filename": qr.filename,
+                        "created_at": qr.created_at.isoformat(),
+                        "access_count": qr.access_count
+                    } for qr in qr_codes
+                ]
+            }
+            
+        elif function_name == "delete_qr_code":
+            qr_code = QRCode.query.get(args["qr_id"])
+            if qr_code:
+                qr_service.delete_qr_code(qr_code, current_app.config['QR_CODE_DIR'])
+                return {"success": True, "message": f"QR code {args['qr_id']} deleted"}
+            return {"success": False, "message": f"QR code {args['qr_id']} not found"}
+            
+        elif function_name == "search_qr_codes":
+            query = QRCode.query
+
+            if args.get("url"):
+                query = query.filter(QRCode.url.ilike(f"%{args['url']}%"))
+            
+            if args.get("description"):
+                query = query.filter(QRCode.description.ilike(f"%{args['description']}%"))
+            
+            if "is_active" in args:
+                query = query.filter(QRCode.is_active == args["is_active"])
+            
+            if args.get("created_after"):
+                try:
+                    date = datetime.fromisoformat(args["created_after"])
+                    query = query.filter(QRCode.created_at >= date)
+                except ValueError:
+                    raise ValueError("Invalid date format. Use ISO format (YYYY-MM-DD)")
+
+            query = query.order_by(desc(QRCode.created_at))
+            
+            if args.get("limit"):
+                query = query.limit(args["limit"])
+
+            qr_codes = query.all()
+            
+            return {
+                "qr_codes": [
+                    {
+                        "id": qr.id,
+                        "url": qr.url,
+                        "filename": qr.filename,
+                        "description": qr.description,
+                        "is_active": qr.is_active,
+                        "created_at": qr.created_at.isoformat(),
+                        "access_count": qr.access_count
+                    } for qr in qr_codes
+                ],
+                "total_results": len(qr_codes)
             }
 
-    def _extract_qr_id(self, llm_response: str) -> Optional[int]:
-        """Extract QR code ID from LLM response.
-        
-        Args:
-            llm_response (str): The LLM's response to parse
+        elif function_name == "update_qr_code":
+            qr_code = QRCode.query.get(args["qr_id"])
+            if not qr_code:
+                raise ValueError(f"QR code {args['qr_id']} not found")
+
+            # Update fields if provided
+            if "url" in args:
+                if not QRCodeService.validate_url(args["url"]):
+                    raise ValueError("Invalid URL provided")
+                qr_code.url = args["url"]
+
+            if "description" in args:
+                qr_code.description = args["description"]
+
+            if "is_active" in args:
+                qr_code.is_active = args["is_active"]
+
+            if "fill_color" in args:
+                qr_code.fill_color = args["fill_color"]
+
+            if "back_color" in args:
+                qr_code.back_color = args["back_color"]
+
+            qr_code.updated_at = datetime.utcnow()
             
-        Returns:
-            Optional[int]: Extracted QR code ID if found
-        """
-        import re
-        id_match = re.search(r'(?:id|ID|#)\s*(\d+)', llm_response)
-        return int(id_match.group(1)) if id_match else None 
+            try:
+                db.session.commit()
+                
+                # Regenerate QR code image if URL changed
+                if "url" in args:
+                    path = Path(current_app.config['QR_CODE_DIR']) / qr_code.filename
+                    QRCodeService.generate_qr_image(
+                        qr_code.url,
+                        path,
+                        qr_code.fill_color,
+                        qr_code.back_color
+                    )
+
+                return {
+                    "success": True,
+                    "qr_code": {
+                        "id": qr_code.id,
+                        "url": qr_code.url,
+                        "description": qr_code.description,
+                        "is_active": qr_code.is_active,
+                        "updated_at": qr_code.updated_at.isoformat()
+                    }
+                }
+            except Exception as e:
+                db.session.rollback()
+                raise ValueError(f"Failed to update QR code: {str(e)}")
+            
+        raise ValueError(f"Unknown function: {function_name}")

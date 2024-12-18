@@ -13,3 +13,4 @@ validators==0.23.2
 Werkzeug==3.0.1
 Flask-Migrate==4.0.5
 requests==2.31.0
+groq==0.4.2
