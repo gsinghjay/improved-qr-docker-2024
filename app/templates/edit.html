@@ -7,7 +7,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Edit QR Code</h5>
                 <div class="btn-group">
-                    <a href="{{ url_for('qr.view_qr_details', qr_id=qr_code.id) }}" class="btn btn-info">
+                    <a href="{{ url_for('qr.view_qr', qr_id=qr_code.id) }}" class="btn btn-info">
                         <i class="bi bi-eye"></i> View
                     </a>
                     <a href="{{ url_for('qr.index') }}" class="btn btn-secondary">
