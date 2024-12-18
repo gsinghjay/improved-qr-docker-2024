@@ -35,4 +35,10 @@ def create_app():
     # Register blueprints
     app.register_blueprint(qr_bp)
 
+    # Verify GROQ configuration
+    if not os.getenv('GROQ_API_KEY'):
+        app.logger.warning('GROQ_API_KEY not set. LLM features will be disabled.')
+    else:
+        app.logger.info('GROQ API configured successfully.')
+
     return app 
