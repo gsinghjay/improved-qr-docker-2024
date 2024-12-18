@@ -139,28 +139,15 @@ def dynamic_redirect(short_code):
     return redirect(qr_code.redirect_url or qr_code.url)
 
 @qr_bp.route('/qr/<int:qr_id>/view')
-def view_qr_details(qr_id):
-    """Display detailed information about a QR code."""
+def view_qr(qr_id):
     qr_code = QRCode.query.get_or_404(qr_id)
     
-    # Check if Groq API is configured and accessible
-    groq_enabled = False
-    current_model = None
-    
-    try:
-        llm_service = LLMService()
-        # Try a simple API test call
-        test_response = llm_service._make_api_request([
-            {"role": "user", "content": "test"}
-        ])
-        groq_enabled = True
-        current_model = os.getenv('GROQ_MODEL', 'mixtral-8x7b-32768')
-    except Exception as e:
-        # Log the error but don't expose it to the user
-        current_app.logger.error(f"Groq API error: {str(e)}")
+    # Check if GROQ_API_KEY exists and is not empty
+    groq_enabled = bool(os.getenv('GROQ_API_KEY'))
+    current_model = os.getenv('GROQ_MODEL', 'mixtral-8x7b-32768')
     
     return render_template('view.html', 
-                         qr_code=qr_code,
+                         qr_code=qr_code, 
                          groq_enabled=groq_enabled,
                          current_model=current_model)
 
